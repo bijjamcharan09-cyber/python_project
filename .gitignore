@@ -1,0 +1,11 @@
+data/key.key
+data/passwords_manager.db
+__pycache__/
+*.pyc
+data/lock.txt
+data/expenses.txt
+data/student.txt
+data/contacts.txt
+data/books.txt
+.vscode/
+data/to_do.txt
