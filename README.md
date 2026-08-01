@@ -17,7 +17,6 @@ Welcome to my **Python Projects Collection**! This repository contains beginner-
 | 🎓 **Student Manager** | Manage student records. | Add, search, update, delete student records |
 | 📚 **Library Management** | Manage library books. | Add, view, search, issue, return, delete books |
 
----
 
 ## 2️⃣ Basic Programs
 
@@ -30,7 +29,6 @@ Welcome to my **Python Projects Collection**! This repository contains beginner-
 | 🔺 **Largest of Three Numbers** | Find the largest and smallest among three numbers. | Largest and Smallest Number |
 | 🌡️ **Temperature Converter** | Convert temperature between units. | Celsius ↔ Fahrenheit, Celsius ↔ Kelvin |
 
----
 
 ## 3️⃣ To Do List
 | Project | Description | Key Features |
