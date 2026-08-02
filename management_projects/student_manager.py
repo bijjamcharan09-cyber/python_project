@@ -1,415 +1,467 @@
-FILE_NAME= "student.txt"
-def add_student(): #This function adds a new student record to the file
-    name = input("Enter student name: ").capitalize() 
-    num_subjects = int(input("How many subjects? ")) 
-    record = name
+import sqlite3
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_NAME = os.path.join(BASE_DIR, "..", "data", "student.db")
+
+def get_connection():
+    return sqlite3.connect(DB_NAME)
+
+def create_database():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS students(
+        student_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS subjects(
+        subject_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER,
+        subject TEXT NOT NULL,
+        marks INTEGER,
+        credits INTEGER,
+        FOREIGN KEY(student_id) REFERENCES students(student_id)
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+def add_student():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    name = input("Enter student name: ").capitalize()
+
+    cursor.execute(
+        "INSERT INTO students(name) VALUES(?)",
+        (name,)
+    )
+
+    student_id = cursor.lastrowid
+
+    num_subjects = int(input("How many subjects? "))
 
     for i in range(num_subjects):
-        print(f"\nSubject {i+1}") 
-        subject = input("Enter subject name: ").capitalize() 
-        marks = input("Enter marks: ") 
-        credits = input("Enter credits for this subject: ") 
-        record += "," + subject + ":" + marks + ":" + credits 
 
-    with open(FILE_NAME, "a") as file: 
-        file.write(record + "\n")
+        print(f"\nSubject {i+1}")
 
-    print("-" * 20) 
-    print("Student record saved!") 
-    print("-" * 20) 
+        subject = input("Subject Name : ").capitalize()
+        marks = int(input("Marks : "))
+        credits = int(input("Credits : "))
 
-def view_students(): #This function reads and displays all student records from the file and handles the case where the file does not exist
-    try:
-        with open(FILE_NAME, "r") as file: 
-            records = file.readlines()
+        cursor.execute("""
+        INSERT INTO subjects(student_id,subject,marks,credits)
+        VALUES(?,?,?,?)
+        """, (student_id, subject, marks, credits))
 
-            if not records: 
-                print("\nNo student records found.")
-                return
+    conn.commit()
+    conn.close()
 
-            print("\n" + "=" * 15)  
-            print("STUDENT RECORDS") 
-            print("=" * 15) 
+    print("-" * 25)
+    print("Student Added Successfully")
+    print("-" * 25)
 
-            for student_no, line in enumerate(records, start=1): 
-                data = line.strip().split(",")
-                name = data[0]
+def view_students():
 
-                print(f"\nStudent {student_no}")
-                print("-" * 15)
-                print(f"Name : {name}\n")
-                for i, subject_data in enumerate(data[1:], start=1): 
-                    subject, marks, credits = subject_data.split(":")
-                    print(f"{i}. Subject : {subject}")
-                    print(f"   Marks   : {marks}")
-                    print(f"   Credits : {credits}")
+    conn = get_connection()
+    cursor = conn.cursor()
 
-            print("\n" + "=" * 15)
+    cursor.execute("SELECT * FROM students")
 
-    except FileNotFoundError:
-        print("No records found.")
+    students = cursor.fetchall()
 
-def calculate_average(): #This function calculates and displays the average marks for each student in the file. It handles the case where the file does not exist.
-    try:
-        with open(FILE_NAME, "r") as file:
-            for line in file: 
-                data = line.strip().split(",")
-                name = data[0]
-                total = 0
-                count = 0
-                for subject_data in data[1:]: 
-                    subject, marks, credits = subject_data.split(":")
-                    total += int(marks)
-                    count += 1
-                average = total / count
-                print(f"{name}'s Average =", average)
-    except FileNotFoundError:
-        print("No records found.")
+    if not students:
+        print("No student records found.")
+        conn.close()
+        return
 
-def clear_records(): #This function clears all student records from the file after confirming with the user. It handles the case where the file does not exist.
+    print("=" * 40)
+    print("STUDENT RECORDS")
+    print("=" * 40)
+
+    for student in students:
+
+        student_id = student[0]
+        name = student[1]
+
+        print(f"\nName : {name}")
+
+        cursor.execute("""
+        SELECT subject,marks,credits
+        FROM subjects
+        WHERE student_id=?
+        """, (student_id,))
+
+        subjects = cursor.fetchall()
+
+        for i, sub in enumerate(subjects, start=1):
+
+            print(f"{i}. Subject : {sub[0]}")
+            print(f"   Marks   : {sub[1]}")
+            print(f"   Credits : {sub[2]}")
+
+    conn.close()
+
+def search_student():
+
+    name = input("Enter student name to search: ").capitalize()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT student_id, name FROM students WHERE name = ?",
+        (name,)
+    )
+
+    student = cursor.fetchone()
+
+    if student:
+
+        student_id = student[0]
+
+        print("\nStudent Found")
+        print("-" * 30)
+        print("Name :", student[1])
+
+        cursor.execute("""
+        SELECT subject, marks, credits
+        FROM subjects
+        WHERE student_id = ?
+        """, (student_id,))
+
+        subjects = cursor.fetchall()
+
+        for i, subject in enumerate(subjects, start=1):
+            print(f"\n{i}. Subject : {subject[0]}")
+            print(f"   Marks   : {subject[1]}")
+            print(f"   Credits : {subject[2]}")
+
+    else:
+        print("Student not found.")
+
+    conn.close()
+
+def update_student():
+
+    name = input("Enter student name to update: ").capitalize()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT student_id FROM students WHERE name=?",
+        (name,)
+    )
+
+    student = cursor.fetchone()
+
+    if not student:
+        print("Student not found.")
+        conn.close()
+        return
+
+    student_id = student[0]
+
+    new_name = input("Enter new student name: ").capitalize()
+
+    cursor.execute(
+        "UPDATE students SET name=? WHERE student_id=?",
+        (new_name, student_id)
+    )
+
+    cursor.execute(
+        "DELETE FROM subjects WHERE student_id=?",
+        (student_id,)
+    )
+
+    num_subjects = int(input("Enter number of subjects: "))
+
+    for i in range(num_subjects):
+
+        print(f"\nSubject {i+1}")
+
+        subject = input("Subject Name : ").capitalize()
+        marks = int(input("Marks : "))
+        credits = int(input("Credits : "))
+
+        cursor.execute("""
+        INSERT INTO subjects(student_id, subject, marks, credits)
+        VALUES(?,?,?,?)
+        """, (student_id, subject, marks, credits))
+
+    conn.commit()
+    conn.close()
+
+    print("Student record updated successfully.")
+
+def delete_student():
+
+    name = input("Enter student name to delete: ").capitalize()
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT student_id FROM students WHERE name=?",
+        (name,)
+    )
+
+    student = cursor.fetchone()
+
+    if not student:
+        print("Student not found.")
+        conn.close()
+        return
+
+    student_id = student[0]
+
+    cursor.execute(
+        "DELETE FROM subjects WHERE student_id=?",
+        (student_id,)
+    )
+
+    cursor.execute(
+        "DELETE FROM students WHERE student_id=?",
+        (student_id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+    print("Student deleted successfully.")
+
+def calculate_average():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT student_id, name FROM students")
+    students = cursor.fetchall()
+
+    if not students:
+        print("No student records found.")
+        conn.close()
+        return
+
+    print("\nAverage Marks")
+    print("-" * 30)
+
+    for student_id, name in students:
+
+        cursor.execute("""
+        SELECT AVG(marks)
+        FROM subjects
+        WHERE student_id=?
+        """, (student_id,))
+
+        average = cursor.fetchone()[0]
+
+        print(f"{name}'s Average = {average:.2f}")
+
+    conn.close()
+
+def clear_records():
+
     confirm = input("Delete all records? (yes/no): ")
-    if confirm.lower() == "yes": 
-        with open(FILE_NAME, "w") as file:
-            pass
-        print("-" * 20)
-        print("All records deleted.") 
-        print("-" * 20)
-    else: 
+
+    if confirm.lower() != "yes":
         print("Operation cancelled.")
+        return
 
-def calculate_sgpa(): #This function calculates and displays the SGPA (Semester Grade Point Average) for each student in the file. It handles the case where the file does not exist.
-    try:
-        with open(FILE_NAME, "r") as file:
+    conn = get_connection()
+    cursor = conn.cursor()
 
-            for line in file: 
-                data = line.strip().split(",")
+    cursor.execute("DELETE FROM subjects")
+    cursor.execute("DELETE FROM students")
 
-                name = data[0]
+    conn.commit()
+    conn.close()
 
-                total_points = 0
-                total_credits = 0
+    print("All records deleted successfully.")
 
-                for subject_data in data[1:]: 
+def calculate_sgpa():
 
-                    subject, marks, credits = subject_data.split(":")
+    conn = get_connection()
+    cursor = conn.cursor()
 
-                    marks = int(marks)
-                    credits = int(credits)
+    cursor.execute("SELECT student_id, name FROM students")
+    students = cursor.fetchall()
 
-                    # Grade Point Calculation
-                    if marks >= 90:
-                        grade_point = 10
-                    elif marks >= 80:
-                        grade_point = 9
-                    elif marks >= 70:
-                        grade_point = 8
-                    elif marks >= 60:
-                        grade_point = 7
-                    elif marks >= 50:
-                        grade_point = 6
-                    else:
-                        grade_point = 0
+    if not students:
+        print("No student records found.")
+        conn.close()
+        return
 
-                    total_points += grade_point * credits
-                    total_credits += credits
+    print("\nSGPA REPORT")
+    print("-" * 30)
 
-                if total_credits > 0: 
-                    sgpa = total_points / total_credits
-                    print(f"{name}'s SGPA = {sgpa:.2f}")
-                else: 
-                    print(f"{name} has no subjects.")
+    for student_id, name in students:
 
-    except FileNotFoundError:
-        print("No records found.")
+        cursor.execute("""
+        SELECT marks, credits
+        FROM subjects
+        WHERE student_id=?
+        """, (student_id,))
 
-def delete_student(): #This function deletes specific student record from the file based on the student's name provided by the user. It handles the case where the file does not exist.
-    name_to_delete = input("Enter student name to delete: ")
+        subjects = cursor.fetchall()
 
-    try:
-        with open(FILE_NAME, "r") as file:
-            records = file.readlines()
+        total_points = 0
+        total_credits = 0
 
-        found = False
+        for marks, credits in subjects:
 
-        with open(FILE_NAME, "w") as file: 
-            for record in records:
-                data = record.strip().split(",")
-
-                if data[0].lower() != name_to_delete.lower():
-                    file.write(record)
-                else:
-                    found = True
-
-        if found: 
-            print("-" * 20)
-            print("Student record deleted successfully.")
-            print("-" * 20)
-        else:
-            print("Student not found.")
-
-    except FileNotFoundError:
-        print("No records found.")
-
-def total_students():#calculate total students
-    try:
-        with open(FILE_NAME, "r") as file:
-            records = file.readlines()
-            total = len(records) 
-            if total == 0:
-                print("No Student records found.")
+            if marks >= 90:
+                grade = 10
+            elif marks >= 80:
+                grade = 9
+            elif marks >= 70:
+                grade = 8
+            elif marks >= 60:
+                grade = 7
+            elif marks >= 50:
+                grade = 6
             else:
-                print(f"Total Students: {total}")
-    except FileNotFoundError:
-        print("No records found.")  
+                grade = 0
 
-def search_student(): #This function searches for a specific student record in the file based on the student's name provided by the user. It handles the case where the file does not exist.
-    name = input("Enter student name to search: ")
+            total_points += grade * credits
+            total_credits += credits
 
-    try:
-        with open(FILE_NAME, "r") as file:
-            found = False
+        sgpa = total_points / total_credits
 
-            for line in file:
-                data = line.strip().split(",")
+        print(f"{name}'s SGPA = {sgpa:.2f}")
 
-                if data[0].lower() == name.lower():
-                    found = True
-                    print("\nStudent Found")
-                    print(" Name:", data[0])
+    conn.close()
 
-                    for subject in data[1:]:
-                        sub, marks, credits = subject.split(":")
-                        print(f" Subject: {sub}\n Marks: {marks}\n Credits: {credits}")
+def total_students():
 
-            if not found: 
-                print("Student not found.")
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    except FileNotFoundError:
-        print("No records found.")  
+    cursor.execute("SELECT COUNT(*) FROM students")
 
-def update_student(): #This function updates a specific student record in the file based on the student's name provided by the user. It handles the case where the file does not exist.
-    name_to_update = input("Enter student name to update: ").capitalize() #User input for the name of the student whose record needs to be updated. The input is capitalized to maintain consistency in the records.
+    total = cursor.fetchone()[0]
 
-    try:
-        with open(FILE_NAME, "r") as file:
-            records = file.readlines()
+    print(f"Total Students : {total}")
 
-        found = False
+    conn.close()
 
-        with open(FILE_NAME, "w") as file:
-            for record in records:
-                data = record.strip().split(",")
+def student_ranking():
 
-                if data[0].lower() == name_to_update.lower():
-                    found = True
+    conn = get_connection()
+    cursor = conn.cursor()
 
-                    print("\nCurrent Record")
-                    print("-" * 40)
-                    print("Name:", data[0])
+    cursor.execute("""
+    SELECT students.name,
+           AVG(subjects.marks) AS average
+    FROM students
+    JOIN subjects
+    ON students.student_id = subjects.student_id
+    GROUP BY students.student_id
+    ORDER BY average DESC
+    """)
 
-                    for i, subject_data in enumerate(data[1:], start=1):
-                        subject, marks, credits = subject_data.split(":")
-                        print(f"{i}. {subject} | Marks: {marks} | Credits: {credits}")
-                    print("=" * 40)
-                    print("\nEnter New Details")
-                    print("=" * 40)
+    rankings = cursor.fetchall()
 
-                    new_name = input("Enter new student name: ").capitalize() 
+    if not rankings:
+        print("No student records found.")
+        conn.close()
+        return
 
-                    while True:
-                        try:
-                            num_subjects = int(input("Enter number of subjects: ")) 
-                            if num_subjects > 0:
-                                break
-                            print("Enter at least one subject.")
-                        except ValueError:
-                            print("Enter a valid number.")
+    print("=" * 35)
+    print("STUDENT RANKING")
+    print("=" * 35)
 
-                    new_record = new_name 
+    for rank, (name, average) in enumerate(rankings, start=1):
+        print(f"{rank}. {name}  {average:.2f}")
 
-                    for i in range(num_subjects):
-                        print(f"\nSubject {i+1}")
+    conn.close()
 
-                        subject = input("Subject Name : ").capitalize() 
+def topper_details():
 
-                        while True:
-                            try:
-                                marks = int(input("Marks (0-100): ")) 
-                                if 0 <= marks <= 100:
-                                    break
-                                print("Marks must be between 0 and 100.")
-                            except ValueError:
-                                print("Enter valid marks.")
+    conn = get_connection()
+    cursor = conn.cursor()
 
-                        while True:
-                            try:
-                                credits = int(input("Credits : ")) 
-                                if credits > 0:
-                                    break
-                                print("Credits must be greater than 0.")
-                            except ValueError:
-                                print("Enter valid credits.")
+    cursor.execute("""
+    SELECT students.name,
+           AVG(subjects.marks) AS average
+    FROM students
+    JOIN subjects
+    ON students.student_id = subjects.student_id
+    GROUP BY students.student_id
+    ORDER BY average DESC
+    LIMIT 1
+    """)
 
-                        new_record += f",{subject}:{marks}:{credits}"
+    topper = cursor.fetchone()
 
-                    file.write(new_record + "\n")
+    if topper:
+        print("\nTOPPER DETAILS")
+        print("-" * 30)
+        print("Name :", topper[0])
+        print(f"Average : {topper[1]:.2f}")
 
-                else:
-                    file.write(record)
+    else:
+        print("No student records found.")
 
-        if found: 
-            print("\nStudent record updated successfully.")
+    conn.close()
+
+def pass_fail_report():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT student_id, name FROM students")
+
+    students = cursor.fetchall()
+
+    if not students:
+        print("No student records found.")
+        conn.close()
+        return
+
+    print("=" * 40)
+    print("PASS / FAIL REPORT")
+    print("=" * 40)
+
+    for student_id, name in students:
+
+        cursor.execute("""
+        SELECT subject, marks
+        FROM subjects
+        WHERE student_id=?
+        """, (student_id,))
+
+        subjects = cursor.fetchall()
+
+        failed = []
+
+        for subject, marks in subjects:
+
+            if marks < 50:
+                failed.append((subject, marks))
+
+        print(f"\nStudent : {name}")
+
+        if not failed:
+            print("Status : PASS")
         else:
-            print("\nStudent not found.")
+            print("Status : FAIL")
+            print("Failed Subjects:")
 
-    except FileNotFoundError:
-        print("No records found.")
+            for subject, marks in failed:
+                print(f"• {subject} ({marks})")
 
-def student_ranking(): #This function calculates and displays the ranking of students based on their average marks. It handles the case where the file does not exist.
-    try:
-        with open(FILE_NAME, "r") as file:
-            rankings = []
+    conn.close()
 
-            for line in file:
-                data = line.strip().split(",")
-                name = data[0]
-
-                total_marks = 0
-                total_subjects = 0
-
-                for subject_data in data[1:]:
-                    subject, marks, credits = subject_data.split(":")
-                    total_marks += int(marks)
-                    total_subjects += 1
-
-                average = total_marks / total_subjects
-                rankings.append((name, average))
-
-            rankings.sort(key=lambda x: x[1], reverse=True)
-
-            print("\n" + "=" * 35)
-            print("      STUDENT RANKING")
-            print("=" * 35)
-            print(f"{'Rank':<6}{'Name':<15}{'Average'}")
-            print("-" * 35)
-
-            for rank, (name, avg) in enumerate(rankings, start=1): 
-                print(f"{rank:<6}{name:<15}{avg:.2f}")
-
-    except FileNotFoundError:
-        print("No records found.")
-
-def topper_details(): #This function calculates and displays the details of the student with the highest average marks and the student with the highest SGPA (Semester Grade Point Average). It handles the case where the file does not exist.
-    try:
-        with open(FILE_NAME, "r") as file:
-
-            highest_avg = -1 #Initialaziation of the highest average to -1.
-            highest_sgpa = -1 #Initialization of the highest SGPA to -1.
-
-            avg_topper = "" #Initialization of avg_topper to an empty string.
-            sgpa_topper = "" #Initialization of sgpa_topper to an empty string.
-
-            for line in file:
-                data = line.strip().split(",")
-                name = data[0]
-
-                total_marks = 0 #Initialization of total_marks to 0.
-                total_subjects = 0 #Initialization of total_subjects to 0.
-
-                total_points = 0 #Initialization of total_points to 0.
-                total_credits = 0 #Initialization of total_credits to 0.
-
-                for subject_data in data[1:]:
-                    subject, marks, credits = subject_data.split(":")
-
-                    marks = int(marks)
-                    credits = int(credits)
-
-                    total_marks += marks #Calculates the total marks obtained by the student.
-                    total_subjects += 1 #Calculates the total number of subjects taken by the student.
-                    # Grade Point Calculation
-                    if marks >= 90:
-                        grade_point = 10
-                    elif marks >= 80:
-                        grade_point = 9
-                    elif marks >= 70:
-                        grade_point = 8
-                    elif marks >= 60:
-                        grade_point = 7
-                    elif marks >= 50:
-                        grade_point = 6
-                    else:
-                        grade_point = 0
-
-                    total_points += grade_point * credits #Calculates total grade points earned by a student.
-                    total_credits += credits #Calculates total credits earned by a student.
-
-                average = total_marks / total_subjects #Calculates the average marks obtained.
-                sgpa = total_points / total_credits #Calculates the sgpa of the student.
-
-                if average > highest_avg: 
-                    highest_avg = average
-                    avg_topper = name
-
-                if sgpa > highest_sgpa: 
-                    highest_sgpa = sgpa
-                    sgpa_topper = name
-
-            print("\n" + "=" * 40) 
-            print("           TOPPER DETAILS")
-            print("=" * 40)
-            print(f"Topper by Average : {avg_topper}")
-            print(f"Average Marks     : {highest_avg:.2f}")
-            print("-" * 40)
-            print(f"Topper by SGPA    : {sgpa_topper}")
-            print(f"SGPA              : {highest_sgpa:.2f}")
-            print("=" * 40)
-
-    except FileNotFoundError:
-        print("No records found.")
-
-def pass_fail_report(): #This function reports pass or fail
-    try:
-        with open(FILE_NAME, "r") as file:
-            records = file.readlines()
-
-            if not records:
-                print("\nNo student records found.")
-                return
-
-            print("\n" + "=" * 45)
-            print("           PASS / FAIL REPORT")
-            print("=" * 45)
-
-            for line in records:
-                data = line.strip().split(",")
-                name = data[0]
-
-                failed_subjects = []
-
-                for subject_data in data[1:]:
-                    subject, marks, credits = subject_data.split(":")
-                    marks = int(marks)
-
-                    if marks < 50:
-                        failed_subjects.append((subject, marks))
-
-                print(f"\nStudent : {name}")
-
-                if len(failed_subjects) == 0:
-                    print("Status  : PASS")
-                else:
-                    print("Status  : FAIL")
-                    print("Failed Subjects:")
-                    for subject, marks in failed_subjects:
-                        print(f"   • {subject} ({marks} Marks)")
-
-            print("\n" + "=" * 45)
-
-    except FileNotFoundError:
-        print("No records found.")
-
-def main(): #Main function that displays the menu and handles user input for various operations related to student records.
+def main():
     print("=" *15 + "\nStudent Manager\n" +"=" *15)
     while True:
         print("_" *16 + "\n      MENU\n" +"*" *16)
@@ -460,7 +512,8 @@ def main(): #Main function that displays the menu and handles user input for var
         else:
             print("Invalid choice. Please try again.")
 if __name__ == "__main__":
-    try: #This line checks if the script is being run directly (not imported as a module) and executes the main function to start the program.
+    try:
+        create_database()
         main()
     except KeyboardInterrupt:
         print("\nProgram interrupted.")
