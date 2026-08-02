@@ -4,7 +4,7 @@ __pycache__/
 *.pyc
 data/lock.txt
 data/expenses.txt
-data/student.txt
+data/student.db
 data/contacts.txt
 data/books.txt
 .vscode/
