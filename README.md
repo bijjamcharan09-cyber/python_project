@@ -15,7 +15,7 @@ Welcome to my **Python Projects Collection**! This repository contains beginner-
 | 🔐 **Password Generator** | Generate secure and random passwords with customizable options. | Random password generation, password strength checker, save passwords using database encryption |
 | ✅ **To-Do List** | Organize daily tasks efficiently. | Add tasks, mark as completed, remove tasks, view pending tasks |
 | 🎓 **Student Manager** | Manage student records. | Add, search, update, delete student records |
-| 📚 **Library Management** | Manage library books. | Add, view, search, issue, return, delete books |
+| 📚 **Library Management** | Manage library books. | Add, view, search, issue, return, update, delete books |
 
 
 ## 2️⃣ Basic Programs
@@ -56,8 +56,7 @@ Python-Projects/
 │   ├── Expense_Tracker/
 │   ├── Library_Management/
 │   ├── password_generator/
-│   ├── Student_Manager/
-│   └── To_Do_List/
+│   └── Student_Manager/
 │
 ├── Basic_Programs/
 │   ├── area_calculator/
@@ -67,6 +66,8 @@ Python-Projects/
 │   ├── largest_three_numbers/
 │   └── temperature_converter/
 │
+├──to_do_list/
+├──.gitignore/
 └── README.md
 ```
 
