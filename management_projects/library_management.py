@@ -140,6 +140,36 @@ def delete_book(books):
     print("Book not found.")
     print("-"*29)
 
+def update_book(books):
+    old_title = input("Enter the book title to update: ").capitalize()
+    print("-" * 29)
+
+    for book in books:
+        if book["title"] == old_title:
+
+            print("Current Details")
+            print(f"Title : {book['title']}")
+            print(f"Author: {book['author']}")
+            print("-" * 29)
+
+            new_title = input("Enter new title (press Enter to keep same): ").capitalize()
+            new_author = input("Enter new author (press Enter to keep same): ").capitalize()
+
+            if new_title:
+                book["title"] = new_title
+
+            if new_author:
+                book["author"] = new_author
+
+            save_books(books)
+
+            print("-" * 29)
+            print("Book updated successfully.")
+            print("-" * 29)
+            return
+
+    print("Book not found.")
+    print("-" * 29)
 
 def main():
     books = load_books()
@@ -153,7 +183,8 @@ def main():
         print("4. Issue Book")
         print("5. Return Book")
         print("6. Delete Book")
-        print("7. Exit")
+        print("7. Update Book")
+        print("8. Exit")
 
         choice = input("Enter your choice: ")
 
@@ -176,6 +207,9 @@ def main():
             delete_book(books)
 
         elif choice == "7":
+            update_book(books)
+
+        elif choice == "8":
             print("Thank you!")
             break
 
