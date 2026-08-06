@@ -11,7 +11,7 @@ Welcome to my **Python Projects Collection**! This repository contains beginner-
 
 | Project | Description | Key Features |
 |---------|-------------|--------------|
-| 💰 **Expense Tracker** | Record and manage daily expenses. | Add, view, update, delete expenses, expense summary |
+| 💰 **Expense Tracker** | Record and manage daily expenses. | Add, view, update, delete expenses, search expenses, total expenses using database integration |
 | 🔐 **Password Generator** | Generate secure and random passwords with customizable options. | Random password generation, password strength checker, save passwords using database encryption |
 | ✅ **To-Do List** | Organize daily tasks efficiently. | Add tasks, mark as completed, remove tasks, view pending tasks |
 | 🎓 **Student Manager** | Manage student records. | Add, search, update, delete student records |
