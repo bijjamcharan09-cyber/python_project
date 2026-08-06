@@ -8,4 +8,4 @@ data/contacts.txt
 data/books.txt
 .vscode/
 data/to_do.txt
-data/expense_tracker.db
+data/expenses_tracker.db
