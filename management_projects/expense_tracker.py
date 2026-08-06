@@ -1,13 +1,16 @@
 from datetime import datetime
 import sqlite3
-DB_NAME = "data/expense_tracker.db"
+
+DB_NAME = "data/expenses_tracker.db"
+
 def connect_database():
     """
     Connects to the SQLite database.
     If the database does not exist, it will be created automatically.
     """
-    connection = sqlite3.connect("data/expense_tracker.db")
+    connection = sqlite3.connect("data/expenses_tracker.db")
     return connection
+
 
 def create_table():
     """
@@ -30,12 +33,14 @@ def create_table():
     connection.commit()
     connection.close()
 
+
 def initialize_database():
     """
     Initializes the database by creating the required table.
     """
     create_table()
     print("Database initialized successfully.")
+
 
 def save_expenses(transaction, category, amount):
     """
@@ -78,6 +83,7 @@ def save_expenses(transaction, category, amount):
     finally:
         connection.close()
 
+
 def insert_expense(transaction, category, amount, date, time):
     """
     Inserts a new expense record into the database.
@@ -94,6 +100,7 @@ def insert_expense(transaction, category, amount, date, time):
     connection.close()
 
     print("Expense added successfully.")
+
 
 def fetch_expenses():
     """
@@ -113,6 +120,7 @@ def fetch_expenses():
         print("\n--- No Expenses ---")
     else:
         return expenses
+
 
 def update_expense(expense_id, transaction, category, amount, date, time):
     """
@@ -137,18 +145,18 @@ def update_expense(expense_id, transaction, category, amount, date, time):
 
     print("Expense updated successfully.")
 
-def display_menu(): #This function displays the main menu of the Expense Tracker application.
+
+def display_menu():  # This function displays the main menu of the Expense Tracker application.
     print("\n--- Expense Tracker Menu ---")
     print("1. Add Expense")
     print("2. View Expenses")
-    print("3. Total Expenses")
-    print("4. Clear Expenses")
+    print("3. Update Expense")
+    print("4. Delete Expenses")
     print("5. Search Expense")
-    print("6. Delete Expense")
-    print("7. Edit Expense")
-    print("8. Current Balance")
-    print("9. Category Totals")
-    print("10. Exit")
+    print("6. Total Expenses")
+    print("7. Current Balance")
+    print("8. Category Totals")
+    print("9. Exit")
 
 
 def search_expense(category):
@@ -171,6 +179,7 @@ def search_expense(category):
 
     return records
 
+
 def delete_expense(expense_id):
     """
     Deletes an expense from the database.
@@ -188,6 +197,7 @@ def delete_expense(expense_id):
     connection.close()
 
     print("Expense deleted successfully.")
+
 
 def calculate_total_expenses():
     """
@@ -249,6 +259,7 @@ def calculate_current_balance():
     print(f"Total Expense  : ₹{expense:.2f}")
     print(f"Balance        : ₹{balance:.2f}")
 
+
 def category_totals():
     """
     Displays total amount for each category.
@@ -273,66 +284,61 @@ def category_totals():
     for category, total in rows:
         print(f"{category:<15} ₹{total:.2f}")
 
-def main(): #Main function that serves as the entry point for the Expense Tracker application.
-    create_table()
-    expenses = fetch_expenses() #Fetches existing expenses from the database.
 
-    print("="*15)
-    print("Expense Tracker") #Formatting the title of the application.
-    print("="*15)
+def main():  # Main function that serves as the entry point for the Expense Tracker application.
+    create_table()
+    expenses = fetch_expenses()  # Fetches existing expenses from the database.
+    print("=" * 15)
+    print("Expense Tracker")  # Formatting the title of the application.
+    print("=" * 15)
 
     while True:
         display_menu()
 
-        choice = input("Choose an option (1-10): ")
+        choice = input("Choose an option (1-9): ")
 
         match choice:
             case "1":
 
-                    transaction = input("Transaction (Income/Expense): ")
+                transaction = input("Transaction (Income/Expense): ")
 
-                    category = input("Category: ")
+                category = input("Category: ")
 
-                    amount = float(input("Amount: "))
+                amount = float(input("Amount: "))
 
-                    date = input("Date (DD-MM-YYYY): ")
-
-                    time = input("Time (HH:MM): ")
-
-                    save_expenses(
-                        transaction,
-                        category,
-                        amount
-                    )
+                save_expenses(
+                    transaction,
+                    category,
+                    amount
+                )
             case "2":
                 fetch_expenses()
             case "3":
-                calculate_total_expenses()
+                    update_expense(expense_id=int(input("Enter expense ID to edit: ")),
+                       transaction=input("Transaction (Income/Expense): "),
+                       category=input("Category: "),
+                       amount=float(input("Amount: ")),
+                       date=input("Date (DD-MM-YYYY): "),
+                       time=input("Time (HH:MM): "))
             case "4":
                 delete_expense(expense_id=int(input("Enter expense ID to delete: ")))
             case "5":
                 search_expense(category=input("Enter category to search: "))
             case "6":
-                delete_expense(expense_id=int(input("Enter expense ID to delete: ")))
+                calculate_total_expenses()
             case "7":
-                update_expense(expense_id=int(input("Enter expense ID to edit: ")),
-                               transaction=input("Transaction (Income/Expense): "),
-                               category=input("Category: "),
-                               amount=float(input("Amount: ")),
-                               date=input("Date (DD-MM-YYYY): "),
-                               time=input("Time (HH:MM): "))
-            case "8":
                 calculate_current_balance()
-            case "9":
+            case "8":
                 category_totals()
-            case "10":
+            case "9":
                 print("Exiting...")
                 break
             case _:
                 print("Invalid choice. Please try again.")
-        
-if __name__ == "__main__": #Checks if the script is being run directly (not imported) and calls the main function. 
+
+
+if __name__ == "__main__":  # Checks if the script is being run directly (not imported) and calls the main function.
     try:
         main()
-    except KeyboardInterrupt: #Exception handling.
+    except KeyboardInterrupt:  # Exception handling.
         print("\nProgram interrupted.")
