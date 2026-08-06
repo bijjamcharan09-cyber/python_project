@@ -3,9 +3,9 @@ data/passwords_manager.db
 __pycache__/
 *.pyc
 data/lock.txt
-data/expenses.txt
 data/student.db
 data/contacts.txt
 data/books.txt
 .vscode/
 data/to_do.txt
+data/expense_tracker.db
