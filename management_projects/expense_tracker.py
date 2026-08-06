@@ -1,5 +1,142 @@
 from datetime import datetime
-filename = "data/expenses.txt"
+import sqlite3
+DB_NAME = "data/expense_tracker.db"
+def connect_database():
+    """
+    Connects to the SQLite database.
+    If the database does not exist, it will be created automatically.
+    """
+    connection = sqlite3.connect("data/expense_tracker.db")
+    return connection
+
+def create_table():
+    """
+    Creates the expenses table if it does not already exist.
+    """
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS expenses(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            [transaction] TEXT NOT NULL,
+            category TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+def initialize_database():
+    """
+    Initializes the database by creating the required table.
+    """
+    create_table()
+    print("Database initialized successfully.")
+
+def save_expenses(transaction, category, amount):
+    """
+    Saves a new expense or income record into the SQLite database
+    with the current date and time.
+    """
+
+    # Get current date and time
+    current = datetime.now()
+    current_date = current.strftime("%d-%m-%Y")
+    current_time = current.strftime("%I:%M:%S %p")
+
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO expenses (
+                [transaction],
+                category,
+                amount,
+                date,
+                time
+            )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            transaction,
+            category,
+            amount,
+            current_date,
+            current_time
+        ))
+
+        connection.commit()
+        print("Expense saved successfully.")
+
+    except sqlite3.Error as e:
+        print("Database Error:", e)
+
+    finally:
+        connection.close()
+
+def insert_expense(transaction, category, amount, date, time):
+    """
+    Inserts a new expense record into the database.
+    """
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        INSERT INTO expenses([transaction], category, amount, date, time)
+        VALUES (?, ?, ?, ?, ?)
+    """, (transaction, category, amount, date, time))
+
+    connection.commit()
+    connection.close()
+
+    print("Expense added successfully.")
+
+def fetch_expenses():
+    """
+    Retrieves all expense records from the database.
+    """
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT * FROM expenses
+    """)
+
+    expenses = cursor.fetchall()
+
+    connection.close()
+    if not expenses:
+        print("\n--- No Expenses ---")
+    else:
+        return expenses
+
+def update_expense(expense_id, transaction, category, amount, date, time):
+    """
+    Updates an existing expense record in the database.
+    """
+
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        UPDATE expenses
+        SET [transaction] = ?,
+            category = ?,
+            amount = ?,
+            date = ?,
+            time = ?
+        WHERE id = ?
+    """, (transaction, category, amount, date, time, expense_id))
+
+    connection.commit()
+    connection.close()
+
+    print("Expense updated successfully.")
+
 def display_menu(): #This function displays the main menu of the Expense Tracker application.
     print("\n--- Expense Tracker Menu ---")
     print("1. Add Expense")
@@ -13,250 +150,132 @@ def display_menu(): #This function displays the main menu of the Expense Tracker
     print("9. Category Totals")
     print("10. Exit")
 
-def load_expenses(filename="data/expenses.txt"): #This function loads expenses from a file and returns them as a list of dictionaries.
-    expenses = []
 
-    try: 
-        with open(filename, "r") as file:
-            for line in file:
-               try: 
-                    transaction, category, amount, date, time = line.strip().split(",")
-                    expenses.append({
-                        "transaction": transaction,
-                        "category": category,
-                        "amount": float(amount),
-                        "date": date,
-                        "time": time
-                    })
-               except ValueError:
-                    print(f"Skipping invalid line in {filename}: {line.strip()}")
+def search_expense(category):
+    """
+    Searches expenses by category.
+    """
 
-    except FileNotFoundError:
-        pass
+    connection = connect_database()
+    cursor = connection.cursor()
 
-    return expenses
+    cursor.execute("""
+        SELECT *
+        FROM expenses
+        WHERE category = ?
+    """, (category,))
 
+    records = cursor.fetchall()
 
-def save_expenses(expenses, filename="data/expenses.txt"): #This function saves the expenses to a file. 
-    try:
-        with open(filename, "w") as file:
-            for expense in expenses:
-                 file.write(
-                f"{expense['transaction']},{expense['category']},{expense['amount']},{expense['date']},{expense['time']}\n"
-            )
-    except IOError:
-        print("Error saving expenses.")
-    
-def add_expense(expenses): #This function adds a new expense to the list of expenses. 
-    while True: 
-        transaction = input("Enter transaction type (Income/Expense): ").strip().capitalize()
+    connection.close()
 
-        if transaction in ("Income", "Expense"):
-            break
+    return records
 
-        print("Please enter either 'Income' or 'Expense'.")
+def delete_expense(expense_id):
+    """
+    Deletes an expense from the database.
+    """
 
-    while True:
-        category = input("Enter category: ").strip().capitalize()
+    connection = connect_database()
+    cursor = connection.cursor()
 
-        if category:
-            break
+    cursor.execute("""
+        DELETE FROM expenses
+        WHERE id = ?
+    """, (expense_id,))
 
-        print("Category cannot be empty.")
+    connection.commit()
+    connection.close()
 
-    while True: 
-        try:
-            amount = float(input("Enter amount: ₹"))
+    print("Expense deleted successfully.")
 
-            if amount <= 0:
-                print("Amount must be greater than 0.")
-                continue
+def calculate_total_expenses():
+    """
+    Calculates the total amount of all expenses.
+    """
 
-            break
+    connection = connect_database()
+    cursor = connection.cursor()
 
-        except ValueError:
-            print("Please enter a valid amount.")
+    cursor.execute("""
+        SELECT SUM(amount)
+        FROM expenses
+        WHERE transaction = 'Expense'
+    """)
 
-    now = datetime.now()
+    total = cursor.fetchone()[0]
 
-    expenses.append({ 
-        "transaction": transaction,
-        "category": category,      #This line adds the transaction type to the expense dictionary.
-        "amount": amount,
-        "date": now.strftime("%d-%m-%Y"),
-        "time": now.strftime("%I:%M:%S %p")
-    })
+    connection.close()
 
-    print("-------------------------")
-    print(f"{transaction} added successfully.")
+    if total is None:
+        total = 0
+
+    print(f"Total Expenses : ₹{total:.2f}")
 
 
-def view_expenses(expenses): #This function displays all the recorded expenses in a formatted manner. If there are no expenses, it informs the user accordingly.
-    if not expenses:
-        print("No expenses recorded yet.\n")
-        return
+def calculate_current_balance():
+    """
+    Calculates total income, total expenses, and current balance.
+    """
 
-    print("\n--- All Expenses ---")
-    for i, expense in enumerate(expenses, start=1):
-        print(f"{i}. Transaction: {expense['transaction']}\n   Category: {expense['category']}\n   Amount: ₹{expense['amount']:.2f}\n   Date: {expense['date']}\n   Time: {expense['time']}")
-    print()
+    connection = connect_database()
+    cursor = connection.cursor()
 
+    cursor.execute("""
+        SELECT SUM(amount)
+        FROM expenses
+        WHERE transaction='Income'
+    """)
 
-def total_expenses(expenses): #This function calculates and displays the total amount of expenses recorded. 
-    total = sum(
-        expense["amount"]
-        for expense in expenses 
-        if expense["transaction"] == "expense" or expense["transaction"] == "Expense"
-    )
-    print(f"Total Expenses: ₹{total:.2f}\n")
+    income = cursor.fetchone()[0]
 
+    cursor.execute("""
+        SELECT SUM(amount)
+        FROM expenses
+        WHERE transaction='Expense'
+    """)
 
-def clear_expenses(expenses, filename="data/expenses.txt"): #This function clears all recorded expenses after confirming with the user.
-    confirm = input("Are you sure? (yes/no): ").lower()
+    expense = cursor.fetchone()[0]
 
-    for expense in expenses:
-        if expense["transaction"] == "Expense" or expense["transaction"] == "Income":
-            if confirm == "yes":
-                expenses.clear()
-                open(filename, "w").close()
-                print("All expenses cleared!")
-            else:
-                print("Operation cancelled.")
+    connection.close()
 
-def search_expense(expenses): #This function allows the user to search for expenses by category. 
-    name = input("Enter category: ").lower()
+    income = income if income else 0
+    expense = expense if expense else 0
 
-    found = False
-
-    for expense in expenses:
-        if expense["category"].lower() == name:
-            print(expense)
-            found = True
-
-    if not found:
-        print("No expense found.")
-
-def delete_expense(expenses): #This function allows the user to delete a specific expense by its index in the list. 
-    view_expenses(expenses) #Function calling.
-
-    try:
-        index = int(input("Enter expense number: ")) - 1
-
-        if 0 <= index < len(expenses):
-            expenses.pop(index)
-            save_expenses(expenses)
-            print("Expense deleted.")
-        else:
-            print("Invalid number.")
-
-    except ValueError:
-        print("Enter a valid integer.")
-
-def total_category_expenses(expenses): #This function calculates and displays the total expenses for each category.
-    totals = {}
-
-    for expense in expenses:
-       cat = expense["category"]
-       totals[cat] = totals.get(cat, 0) + expense["amount"]
-
-    for cat, amt in totals.items():
-        print(cat, amt)
-
-def edit_expense(expenses): #This function allows the user to edit an existing expense by selecting it from the list and updating its details.
-    if not expenses:
-        print("No expenses to edit.\n")
-        return
-
-    view_expenses(expenses) #Function calling.
-
-    try:
-        index = int(input("Enter expense number to edit: ")) - 1
-
-        if index < 0 or index >= len(expenses):
-            print("Invalid expense number.\n")
-            return
-
-        print("\nLeave blank to keep the current value.")
-
-        transaction = input(f"New transaction({expenses[index]['transaction']}): ").strip().capitalize()
-
-        category = input(f"New category ({expenses[index]['category']}): ").strip().capitalize()
-
-        amount = input(f"New amount (₹{expenses[index]['amount']:.2f}): ").strip().capitalize()
-
-        if transaction:
-            expenses[index]["transaction"] = transaction
-
-        if category:
-            expenses[index]["category"] = category
-
-        if amount:
-            try:
-                amount = float(amount)
-                if amount > 0:
-                    expenses[index]["amount"] = amount
-                else:
-                    print("Amount must be greater than 0.")
-            except ValueError:
-                print("Invalid amount. Previous amount kept.")
-
-        save_expenses(expenses)
-
-        print("Expense updated successfully!\n")
-
-    except ValueError:
-        print("Please enter a valid number.\n")
-
-def current_balance(expenses): #This function calculates and displays the current balance by summing up all income and subtracting all expenses.
-    total_income = 0
-    total_expense = 0
-
-    for expense in expenses:
-        if expense["transaction"] == "Income":
-            total_income += expense["amount"]
-
-        elif expense["transaction"] == "Expense":
-            total_expense += expense["amount"]
-
-    balance = total_income - total_expense
+    balance = income - expense
 
     print("\n------ Current Balance ------")
-    print(f"Total Income   : ₹{total_income:.2f}")
-    print(f"Total Expenses : ₹{total_expense:.2f}")
-    print(f"Current Balance: ₹{balance:.2f}")
-    print("="*15)
+    print(f"Total Income   : ₹{income:.2f}")
+    print(f"Total Expense  : ₹{expense:.2f}")
+    print(f"Balance        : ₹{balance:.2f}")
 
-def category_totals(expenses): #This function calculates and displays the total amounts for each category of income and expenses separately.
-    expense_totals = {}
-    income_totals = {}
+def category_totals():
+    """
+    Displays total amount for each category.
+    """
 
-    for expense in expenses:
-        category = expense["category"]
-        amount = expense["amount"]
+    connection = connect_database()
+    cursor = connection.cursor()
 
-        if expense["transaction"] == "Expense":
-            expense_totals[category] = expense_totals.get(category, 0) + amount
+    cursor.execute("""
+        SELECT category,
+               SUM(amount)
+        FROM expenses
+        GROUP BY category
+    """)
 
-        elif expense["transaction"] == "Income":
-            income_totals[category] = income_totals.get(category, 0) + amount
+    rows = cursor.fetchall()
 
-    print("\n------ Income Category Totals ------")
-    if income_totals:
-        for category, total in income_totals.items():
-            print(f"{category:<15} ₹{total:.2f}")
-    else:
-        print("No income records found.")
+    connection.close()
 
-    print("\n------ Expense Category Totals ------")
-    if expense_totals:
-        for category, total in expense_totals.items():
-            print(f"{category:<15} ₹{total:.2f}")
-    else:
-        print("No expense records found.")
+    print("\nCategory Totals")
 
-    print()
+    for category, total in rows:
+        print(f"{category:<15} ₹{total:.2f}")
+
 def main(): #Main function that serves as the entry point for the Expense Tracker application.
-    expenses = load_expenses()
+    create_table()
+    expenses = fetch_expenses() #Fetches existing expenses from the database.
 
     print("="*15)
     print("Expense Tracker") #Formatting the title of the application.
@@ -269,26 +288,44 @@ def main(): #Main function that serves as the entry point for the Expense Tracke
 
         match choice:
             case "1":
-                add_expense(expenses)
-                save_expenses(expenses)
+
+                    transaction = input("Transaction (Income/Expense): ")
+
+                    category = input("Category: ")
+
+                    amount = float(input("Amount: "))
+
+                    date = input("Date (DD-MM-YYYY): ")
+
+                    time = input("Time (HH:MM): ")
+
+                    save_expenses(
+                        transaction,
+                        category,
+                        amount
+                    )
             case "2":
-                view_expenses(expenses)
+                fetch_expenses()
             case "3":
-                total_expenses(expenses)
+                calculate_total_expenses()
             case "4":
-                clear_expenses(expenses)
+                delete_expense(expense_id=int(input("Enter expense ID to delete: ")))
             case "5":
-                search_expense(expenses)
+                search_expense(category=input("Enter category to search: "))
             case "6":
-                delete_expense(expenses)
+                delete_expense(expense_id=int(input("Enter expense ID to delete: ")))
             case "7":
-                edit_expense(expenses)
+                update_expense(expense_id=int(input("Enter expense ID to edit: ")),
+                               transaction=input("Transaction (Income/Expense): "),
+                               category=input("Category: "),
+                               amount=float(input("Amount: ")),
+                               date=input("Date (DD-MM-YYYY): "),
+                               time=input("Time (HH:MM): "))
             case "8":
-                current_balance(expenses)
+                calculate_current_balance()
             case "9":
-                category_totals(expenses)
+                category_totals()
             case "10":
-                save_expenses(expenses)
                 print("Exiting...")
                 break
             case _:
