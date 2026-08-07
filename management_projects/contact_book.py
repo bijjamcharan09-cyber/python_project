@@ -1,120 +1,161 @@
 import ast
+import sqlite3
 
-FILENAME = "data/contacts.txt"
+DB_NAME = "data/contact_book.db"
+
+def connect_database():
+    """
+    Connects to the SQLite database.
+    If the database does not exist, it will be created automatically.
+    """
+    connection = sqlite3.connect(DB_NAME)
+    return connection
+
+
+def create_table():
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contacts(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone_number TEXT NOT NULL,
+            sim_type TEXT NOT NULL,
+            address TEXT,
+            email TEXT
+        )
+    """)
+
+    connection.commit()
+    connection.close()
+
+
+def initialize_database():
+    """
+    Initializes the database by creating the required table.
+    """
+    create_table()
+    print("Database initialized successfully.")
 
 def display_menu(): #This function displays the main menu of the contact book application.
     print("\n===== Contact Book Menu =====")
     print("1. Add Contact")
     print("2. View Contacts")
-    print("3. Search Contact")
-    print("4. Update Contact")
-    print("5. Delete Contact")
+    print("3. Update Contact")
+    print("4. Delete Contact")
+    print("5. Search Contact")
     print("6. Exit")
 
-def load_contacts(): #This function loads all the previous contacts from a file.
-    contacts = []
+def fetch_contacts():
+    """
+    Retrieves all contacts records from the database.
+    """
+    connection = connect_database()
+    cursor = connection.cursor()
 
-    try:
-        with open(FILENAME, "r") as file:
-            for line in file:
-                contacts.append(ast.literal_eval(line.strip()))
-    except FileNotFoundError:
-        pass
+    cursor.execute("""
+        SELECT * FROM contacts
+    """)
 
-    return contacts
+    contacts = cursor.fetchall()
 
-
-def save_contacts(contacts): #This function saves the contacts into a file and uses exception handling.
-    try:
-        with open(FILENAME, "w") as file:
-            for contact in contacts:
-                file.write(str(contact) + "\n")
-    except Exception as e:
-        print(f"Error saving contacts: {e}")
-
-
-def add_contact(contacts): # This function prompts the user to enter a new contact and saves it to the file.
-    name = input("Enter name: ").capitalize()
-    phone = input("Enter phone number: ")
-
-    contact = {
-        "name": name,
-        "phone": phone
-    }
-
-    contacts.append(contact)
-    save_contacts(contacts)
-
-    print("-"*27)
-    print("Contact added successfully.")
-    print("-"*27)
-
-
-def view_contacts(contacts): # This function displays all contacts.
+    connection.close()
     if not contacts:
-        print("No contacts found.")
-        return
+        print("\n----------\nNo Contacts\n----------")
+    else:
+        return contacts
 
-    for i, contact in enumerate(contacts):
-        print("-"*30)
-        print(f"{i + 1}. Name = {contact['name']}")
-        print(f"   Phone number = {contact['phone']}")
-        print("-"*30)
-        print()
+def save_contact(name, phone_number, sim_type, address, email):
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO contacts(
+                name,
+                phone_number,
+                sim_type,
+                address,
+                email
+            )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            name,
+            phone_number,
+            sim_type,
+            address,
+            email
+        ))
+
+        connection.commit()
+        print("Contact saved successfully.")
+
+    except sqlite3.Error as e:
+        print("Database Error:", e)
+
+    finally:
+        connection.close()
+
+def search_contact_db(name):
+    connection = connect_database()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT * FROM contacts
+        WHERE name = ?
+    """, (name,))
+
+    contact = cursor.fetchall()
+
+    connection.close()
+
+    return contact
 
 
-def search_contact(contacts): # This function searches for a contact by name and displays the contact information if found.
-    name = input("Enter name to search: ").capitalize()
+def update_contact_db(old_name, new_name, phone_number,
+                      sim_type, address, email):
 
-    found = False
+    connection = connect_database()
+    cursor = connection.cursor()
 
-    for contact in contacts:
-        if contact["name"].capitalize() == name:
-            print("-"*24)
-            print(f"Name: {contact['name']}")
-            print(f"Phone number: {contact['phone']}")
-            print("-"*24)
-            found = True
+    cursor.execute("""
+        UPDATE contacts
+        SET
+            name = ?,
+            phone_number = ?,
+            sim_type = ?,
+            address = ?,
+            email = ?
+        WHERE name = ?
+    """, (
+        new_name,
+        phone_number,
+        sim_type,
+        address,
+        email,
+        old_name
+    ))
 
-    if not found:
-        print("-"*24)
-        print("Contact not found.")
-        print("-"*24)
+    connection.commit()
+    connection.close()
 
+def delete_contact_db(id):
+    fetch_contacts()  # Display contacts before deletion to check id. 
+    connection = connect_database()
+    cursor = connection.cursor()
 
-def update_contact(contacts): # This function updates the phone number of an existing contact.
-    name = input("Enter contact name to update: ").capitalize()
+    cursor.execute("""
+        DELETE FROM contacts
+        WHERE id = ?
+    """, (id,))
 
-    for contact in contacts:
-        if contact["name"].capitalize() == name:
-            contact["name"] = input("Enter new name: ").capitalize()
-            contact["phone"] = input("Enter new phone number: ")
-            save_contacts(contacts)
-            print("-"*24)
-            print("Contact updated successfully.")
-            print("-"*24)
-            return
-
-    print("Contact not found.")
-
-
-def delete_contact(contacts): # This function deletes a contact by name and saves the updated contact list to the file.
-    name = input("Enter contact name to delete: ").capitalize() 
-
-    for contact in contacts:
-        if contact["name"].capitalize() == name:
-            contacts.remove(contact)
-            save_contacts(contacts)
-            print("-"*29)
-            print("Contact deleted successfully.")
-            print("-"*29)
-            return
-
-    print("Contact not found.")
+    connection.commit()
+    connection.close()
 
 
 def main(): # This is the main function that runs the contact book application.
-    contacts = load_contacts()
+    contacts = fetch_contacts()
 
     while True:
         display_menu()
@@ -122,19 +163,32 @@ def main(): # This is the main function that runs the contact book application.
         choice = input("Enter your choice: ")
 
         if choice == "1":
-            add_contact(contacts)
+            save_contact(
+                input("Enter name: "),
+                input("Enter phone number: "),
+                input("Enter SIM type: "),
+                input("Enter address: "),
+                input("Enter email: ")
+            )
 
         elif choice == "2":
-            view_contacts(contacts)
+            fetch_contacts()
 
         elif choice == "3":
-            search_contact(contacts)
+             update_contact_db(
+                            input("Enter old contact name: "),
+                            input("Enter new name: "),
+                            input("Enter new phone number: "),
+                            input("Enter new SIM type: "),
+                            input("Enter new address: "),
+                            input("Enter new email: ")
+                        )
 
         elif choice == "4":
-            update_contact(contacts)
+             delete_contact_db(input("Enter contact ID to delete: "))
 
         elif choice == "5":
-            delete_contact(contacts)
+            search_contact_db(input("Enter contact name to search: "))
 
         elif choice == "6":
             print("Goodbye!")
