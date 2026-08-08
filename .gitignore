@@ -10,3 +10,4 @@ data/to_do.txt
 data/expenses_tracker.db
 data/contact_book.db
 database_files/__init__.py
+data/passwords_manager(2).db
