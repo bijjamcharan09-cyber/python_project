@@ -112,6 +112,11 @@ python basic_programs/calculator.py
 ```bash
 python to_do_list.py
 ```
+## 4. Install dependencies (if any)
+
+```bash
+pip install -r requirements.txt
+```
 
 ---
 
