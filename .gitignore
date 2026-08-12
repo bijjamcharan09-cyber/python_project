@@ -1,14 +1,5 @@
-data/key.key
-data/passwords_manager.db
+data/
 __pycache__/
 *.pyc
-data/lock.txt
-data/student.db
-data/books.txt
 .vscode/
-data/to_do.txt
-data/expenses_tracker.db
-data/contact_book.db
 database_files/__init__.py
-data/passwords_manager(2).db
-data/student_data.db
