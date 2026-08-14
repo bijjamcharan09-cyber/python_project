@@ -7,16 +7,20 @@ sys.path.append(
     )
 )
 from database_files import library_db
-import ast
-def add_book():
+def add_book(conn):
     book_title = input("Enter book title: ")
     book_author = input("Enter book author: ")
     book_year = input("Enter book year: ")
-    library_db.insert_book(library_db.get_connection(), (book_title, book_author, book_year))
+
+    library_db.insert_book(
+        conn,
+        (book_title, book_author, book_year)
+    )
+
     print("Book added successfully.")
 
-def view_books():
-    books = library_db.get_all_books(library_db.get_connection())
+def view_books(conn):
+    books = library_db.get_all_books(conn)
     if not books:
         print("No books found.")
         return
@@ -25,9 +29,9 @@ def view_books():
     for book in books:
         print(*book, sep="\t")
 
-def search_book():
+def search_book(conn):
     book_id = input("Enter book ID to search: ")
-    book = library_db.get_book_by_id(library_db.get_connection(), book_id)
+    book = library_db.get_book_by_id(conn, book_id)
     if not book:
         print("Book not found.")
         return
@@ -35,27 +39,27 @@ def search_book():
     print("-" * 40)
     print(*book, sep="\t")
 
-def issue_book():
+def issue_book(conn):
     book_id = input("Enter book ID to issue: ")
-    library_db.issue_book(library_db.get_connection(), book_id)
+    library_db.issue_book(conn, book_id)
     print("Book issued successfully.")
 
-def return_book():
+def return_book(conn):
     book_id = input("Enter book ID to return: ")
-    library_db.return_book(library_db.get_connection(), book_id)
+    library_db.return_book(conn, book_id)
     print("Book returned successfully.")
 
-def update_book():
+def update_book(conn):
     book_id = input("Enter book ID to update: ")
     book_title = input("Enter new book title: ")
     book_author = input("Enter new book author: ")
     book_year = input("Enter new book year: ")
-    library_db.update_book(library_db.get_connection(), (book_title, book_author, book_year, book_id))
+    library_db.update_book(conn, (book_title, book_author, book_year, book_id))
     print("Book updated successfully.")
 
-def delete_book():
+def delete_book(conn):
     book_id = input("Enter book ID to delete: ")
-    library_db.delete_book(library_db.get_connection(), book_id)
+    library_db.delete_book(conn, book_id)
     print("Book deleted successfully.")
 
 def display_menu():
@@ -71,29 +75,42 @@ def display_menu():
 def main():
     conn = library_db.get_connection()
     library_db.create_table(conn)
-    print("="*25 + "\nLibrary Management System\n" + "="*25)
+
+    print("=" * 25 + "\nLibrary Management System\n" + "=" * 25)
+
     while True:
         display_menu()
         choice = input("Enter your choice: ")
+
         if choice == '1':
-            add_book()
+            add_book(conn)
+
         elif choice == '2':
-            view_books()
+            view_books(conn)
+
         elif choice == '3':
-            search_book()
+            search_book(conn)
+
         elif choice == '4':
-            issue_book()
+            issue_book(conn)
+
         elif choice == '5':
-            return_book()
+            return_book(conn)
+
         elif choice == '6':
-            update_book()
+            update_book(conn)
+
         elif choice == '7':
-            delete_book()
+            delete_book(conn)
+
         elif choice == '8':
             print("Exiting the program.")
+            conn.close()
             break
+
         else:
             print("Invalid choice. Please try again.")
+
 if __name__ == "__main__":
     main()
 else:
