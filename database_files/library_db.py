@@ -24,21 +24,25 @@ def create_table(conn):
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         title TEXT NOT NULL,
                         author TEXT NOT NULL,
-                        year INTEGER NOT NULL
-                    );""")
+                        year INTEGER NOT NULL'
+                        issue TEXT NOT NULL DEFAULT 'issued'
+                    );
+                    """)
+        conn.commit()
     except sqlite3.Error as e:
         print(e)
 
 def insert_book(conn, book):
-    """ Insert a new book into the books table """
-    connection = get_connection()
-    cursor = connection.cursor()
-    
+    """Insert a new book into the books table."""
+    cursor = conn.cursor()
+
     cursor.execute("""
         INSERT INTO books (title, author, year)
         VALUES (?, ?, ?)
     """, book)
+
     conn.commit()
+
     return cursor.lastrowid
 
 def get_all_books(conn):
@@ -78,8 +82,9 @@ def update_book(conn, book):
     sql = ''' UPDATE books
               SET title = ? ,
                   author = ? ,
-                  year = ? ,
-              WHERE id = ?'''
+                  year = ? 
+              WHERE id = ?
+              '''
     cursor = conn.cursor()
     cursor.execute(sql, book)
     conn.commit()
