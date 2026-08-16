@@ -1,4 +1,4 @@
-import random as rd
+import secrets
 import string as st
 import pyperclip
 import os 
@@ -28,6 +28,10 @@ def setup_lock():
         while True:
             password = input("Create a lock password: ")
             confirm = input("Confirm password: ")
+
+            if len(password) < 6:
+                print("Password must be at least 6 characters long.")
+                continue
 
             if password == confirm:
                 with open(LOCK_FILE, "w") as file:
@@ -100,6 +104,10 @@ def reset_lock_password():
             print("Passwords do not match.")
             continue
 
+        if len(new_password) < 6:
+            print("Password must be at least 6 characters long.")
+            continue
+
         with open(LOCK_FILE, "w") as file:
             file.write(new_password)
 
@@ -125,17 +133,31 @@ def get_username(): #This function prompts the user to enter a username and retu
     username = input("Enter username: ")
     return username
 
+def get_yes_no(prompt):
+    while True:
+        choice = input(prompt).strip().lower()
+        if choice in ("y", "n"):
+            return choice
+        print("Please enter y or n.")
+
+
+def get_positive_integer(prompt, minimum=1):
+    while True:
+        try:
+            value = int(input(prompt))
+            if value >= minimum:
+                return value
+            print(f"Please enter a number of at least {minimum}.")
+        except ValueError:
+            print("Please enter a whole number.")
+
+
 def get_password_options(): #This function prompts the user to enter password options and returns them.
-    try:
-        length = int(input("Length: "))
-    except ValueError:
-        print("Invalid input")
-
-    include_numbers = input("Include numbers? (y/n): ").lower()
-
-    include_symbols = input("Include symbols? (y/n): ").lower()
-
-    password_count = int(input("How many passwords do you want to generate? "))
+    include_numbers = get_yes_no("Include numbers? (y/n): ")
+    include_symbols = get_yes_no("Include symbols? (y/n): ")
+    minimum_length = 2 + (include_numbers == "y") + (include_symbols == "y")
+    length = get_positive_integer(f"Length (at least {minimum_length}): ", minimum_length)
+    password_count = get_positive_integer("How many passwords do you want to generate? ")
 
     return length, include_numbers, include_symbols, password_count
 
@@ -144,8 +166,8 @@ def generate_password(length, include_numbers, include_symbols): #This function 
     characters = st.ascii_letters
 
     password = [
-        rd.choice(st.ascii_uppercase),
-        rd.choice(st.ascii_lowercase)
+        secrets.choice(st.ascii_uppercase),
+        secrets.choice(st.ascii_lowercase)
     ]
     minimum = 2
 
@@ -156,20 +178,20 @@ def generate_password(length, include_numbers, include_symbols): #This function 
         minimum += 1
 
     if length < minimum:
-        print("Password length too short.")
+        raise ValueError(f"Password length must be at least {minimum}.")
 
     if include_numbers == "y":
         characters += st.digits
-        password.append(rd.choice(st.digits))
+        password.append(secrets.choice(st.digits))
 
     if include_symbols == "y":
         characters += st.punctuation
-        password.append(rd.choice(st.punctuation.replace("|", "")))
+        password.append(secrets.choice(st.punctuation.replace("|", "")))
 
     while len(password) < length:
-        password.append(rd.choice(characters.replace("|", "")))
+        password.append(secrets.choice(characters.replace("|", "")))
 
-    rd.shuffle(password)
+    secrets.SystemRandom().shuffle(password)
 
     return "".join(password)
 
@@ -313,25 +335,16 @@ def delete_saved_password():
     print("Password deleted successfully.")
 
 def copy_generated_password(password):
-
-    choice = input("Copy generated password? (y/n): ").lower()
-
-    if choice == "y":
-
-        try:
-            pyperclip.copy(password)
-            print("Password copied successfully.")
-
-        except Exception as e:
-            print("Clipboard error:", e)
-
-    else:
-        print("Copy skipped.")
+    try:
+        pyperclip.copy(password)
+        print("Password copied successfully.")
+    except pyperclip.PyperclipException as error:
+        print("Clipboard error:", error)
 
 def ask_and_copy(password):
-    choice = input("Copy password to clipboard? (y/n): ").lower()
+    choice = get_yes_no("Copy password to clipboard? (y/n): ")
 
-    if choice == "yes" or choice == "y":
+    if choice == "y":
         copy_generated_password(password)
     else:
         print("-"*12)
@@ -374,7 +387,7 @@ def copy_saved_password():
         if result:
 
             password = decrypt_password(result[0])
-            copy_generated_password(password)
+            ask_and_copy(password)
 
         else:
 
@@ -417,17 +430,14 @@ def main():
                     print("-"*38)
                     print("Thank you for using password generator")
                     print("-"*38)
-                copy_generated_password(password)
+                ask_and_copy(password)
         elif choice == "2":
             if get_lock_password():
                 view_saved_passwords()
             else:
                 print("Sorry you can't passwords!!")
         elif choice == "3":
-            if get_lock_password():
-                update_saved_password()
-            else:
-                print("Access denied")
+            update_saved_password()
         elif choice == "4":
             if get_lock_password():
                 delete_saved_password()
@@ -440,10 +450,7 @@ def main():
             else:
                 print("Generate a password first.")
         elif choice == "6":
-            if get_lock_password():
-                copy_saved_password()
-            else:
-                print("Wrong password,can't copy passwords!!")    
+            copy_saved_password()
         elif choice == "7":
             set_lock_password()
         elif choice == "8":
